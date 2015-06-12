@@ -57,8 +57,6 @@ for f in `find . -name grade | sort`; do
     assn=$(pad "$(basename $dir)" 30)
     grader=$(git log -n 1 --pretty=format:"%aN" "$f")
     signature=$(git log -n 1 --pretty=format:"%G?" "$f")
-    gradee=$(git log -1 --pretty=format:"%s" "$f" |
-             grep -Eio '\<[a-z]{5}[0-9]{3}\>')
 
     grade="---"
     if isGraded "$f"; then
@@ -74,39 +72,19 @@ for f in `find . -name grade | sort`; do
         printf "$endcolor|"
         colorPercent "$assnPercent"
         printf "  $assn$endcolor |  $grader "
-        if [ "$signature" = "G" ]; then
-            # check whether the cs account on the commit message matches the cs
-            # account of the student
-            if [ -z "$gradee" ]; then
-                printf "$yellow[noname]$endcolor"
-            else
-                if [ ! "$user" = "$gradee" ]; then
-                    printf "$red[wrongname]$endcolor"
-                else
-                    printf "$green[signed]$endcolor"
-                fi
-            fi
-        else
-            if [ "$signature" = "U" ]; then
-                # check whether the cs account on the commit message matches the cs
-                # account of the student
-                if [ -z "$gradee" ]; then
-                    printf "$yellow[noname]$endcolor"
-                else
-                    if [ ! "$user" = "$gradee" ]; then
-                        printf "$red[wrongname]$endcolor"
-                    else
-                        # this means that our commits are signed but untrusted
-                        # this isn't perfect cryptographically, but it should be good enough for us
-                        # displaying a different message is confusing for students
-                        #printf "$cyn[signed but untrusted]$endcolor"
-                        printf "$green[signed]$endcolor"
-                    fi
-                fi
-            else
-                printf "$red[bad signature]$endcolor"
-            fi
-        fi
+
+        if [[ ( "$signature" = "B" ) || ( "$signature" = "N" ) ]]; then
+            printf "$red[bad signature]$endcolor"
+        elif [ "$(git log -1 --pretty=format:"%s" "$f" | grep "$user")" = "" ]; then printf "$yellow[no name]$endcolor" 
+        elif [ "$signature" = "U" ]; then
+            # this means that our commits are signed but untrusted
+            # this isn't perfect cryptographically, but it should be good enough for us
+            # displaying a different message is confusing for students
+            #printf "$cyn[signed but untrusted]$endcolor"
+            printf "$green[signed]$endcolor"
+        elif [ "$signature" = "G" ]; then
+            printf "$green[signed]$endcolor"
+        fi 
         echo
     else
         printf "    %3s / %3s    " "$grade" "$outof"
